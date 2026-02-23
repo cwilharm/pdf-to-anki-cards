@@ -288,6 +288,7 @@ if uploaded_file:
             # ── Step 1: Extract ──────────────────────────────────────────
             progress_bar.progress(0.04)
             from pipeline.ocr_extractor import models_cached
+
             ocr_note = (
                 "Scanned document detected — downloading OCR models (~200 MB). "
                 "This only happens once and may take a few minutes."

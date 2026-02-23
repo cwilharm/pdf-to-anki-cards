@@ -1,4 +1,5 @@
 """AI card generation module using OpenAI."""
+
 import json
 import re
 import openai
@@ -170,11 +171,20 @@ def _build_system_prompt(card_type: str, answer_format: str, language_name: str)
     else:  # both
         fmt = _FMT_BOTH
         ans = _ANS_BULLETS if answer_format == "bullets" else _ANS_SENTENCES
-        parts = [_ROLE, _QUALITY, _FORBIDDEN, _ATOMICITY, fmt, f"For Basic cards: {ans}"]
+        parts = [
+            _ROLE,
+            _QUALITY,
+            _FORBIDDEN,
+            _ATOMICITY,
+            fmt,
+            f"For Basic cards: {ans}",
+        ]
 
     # Language instruction — appended last so it overrides any default tendency
-    parts.append(f"Respond exclusively in {language_name}. "
-                 f"All flashcard content must be written in {language_name}.")
+    parts.append(
+        f"Respond exclusively in {language_name}. "
+        f"All flashcard content must be written in {language_name}."
+    )
 
     return "\n\n".join(parts)
 
@@ -182,6 +192,7 @@ def _build_system_prompt(card_type: str, answer_format: str, language_name: str)
 # ---------------------------------------------------------------------------
 # Public API
 # ---------------------------------------------------------------------------
+
 
 def generate_cards_for_chunk(
     chunk: dict,
@@ -224,6 +235,7 @@ def generate_cards_for_chunk(
 # ---------------------------------------------------------------------------
 # JSON parsing helpers
 # ---------------------------------------------------------------------------
+
 
 def _parse_cards(raw: str) -> list[dict]:
     raw = re.sub(r"```(?:json)?\s*", "", raw).strip().rstrip("```").strip()

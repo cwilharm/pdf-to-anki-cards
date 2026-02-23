@@ -1,4 +1,5 @@
 """PDF text extraction module."""
+
 import re
 import pdfplumber
 

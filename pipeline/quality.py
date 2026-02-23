@@ -1,8 +1,11 @@
 """Quality control — filter bad cards and remove duplicates."""
+
 import re
 
 
-def filter_and_deduplicate(cards: list[dict], similarity_threshold: float = 0.72) -> list[dict]:
+def filter_and_deduplicate(
+    cards: list[dict], similarity_threshold: float = 0.72
+) -> list[dict]:
     """
     Handles both basic {"front","back"} and cloze {"text"} cards.
     1. Validates structure and minimum length.
@@ -11,12 +14,15 @@ def filter_and_deduplicate(cards: list[dict], similarity_threshold: float = 0.72
     basic = [c for c in cards if "front" in c]
     cloze = [c for c in cards if "text" in c]
 
-    return _dedup_basic(basic, similarity_threshold) + _dedup_cloze(cloze, similarity_threshold)
+    return _dedup_basic(basic, similarity_threshold) + _dedup_cloze(
+        cloze, similarity_threshold
+    )
 
 
 # ---------------------------------------------------------------------------
 # Basic cards
 # ---------------------------------------------------------------------------
+
 
 def _dedup_basic(cards: list[dict], threshold: float) -> list[dict]:
     valid = []
@@ -65,6 +71,7 @@ def _dedup_cloze(cards: list[dict], threshold: float) -> list[dict]:
 # ---------------------------------------------------------------------------
 # Helpers
 # ---------------------------------------------------------------------------
+
 
 def _jaccard(a: str, b: str) -> float:
     wa, wb = set(a.split()), set(b.split())

@@ -1,4 +1,5 @@
 """Anki deck export via genanki — supports Basic and Cloze cards."""
+
 import os
 import tempfile
 import genanki
@@ -52,6 +53,7 @@ _AFMT = (
 # Public API
 # ---------------------------------------------------------------------------
 
+
 def create_anki_deck(cards: list[dict], deck_name: str = "PDF Anki Cards") -> bytes:
     """
     Build a .apkg from a mixed list of:
@@ -74,10 +76,12 @@ def create_anki_deck(cards: list[dict], deck_name: str = "PDF Anki Cards") -> by
             css=_CSS,
         )
         for card in basic_cards:
-            deck.add_note(genanki.Note(
-                model=basic_model,
-                fields=[_to_html(card["front"]), _to_html(card["back"])],
-            ))
+            deck.add_note(
+                genanki.Note(
+                    model=basic_model,
+                    fields=[_to_html(card["front"]), _to_html(card["back"])],
+                )
+            )
 
     if cloze_cards:
         cloze_model = genanki.Model(
@@ -85,18 +89,22 @@ def create_anki_deck(cards: list[dict], deck_name: str = "PDF Anki Cards") -> by
             "PDF Anki Cloze",
             model_type=genanki.Model.CLOZE,
             fields=[{"name": "Text"}, {"name": "Extra"}],
-            templates=[{
-                "name": "Cloze",
-                "qfmt": "{{cloze:Text}}",
-                "afmt": "{{cloze:Text}}",
-            }],
+            templates=[
+                {
+                    "name": "Cloze",
+                    "qfmt": "{{cloze:Text}}",
+                    "afmt": "{{cloze:Text}}",
+                }
+            ],
             css=_CSS,
         )
         for card in cloze_cards:
-            deck.add_note(genanki.Note(
-                model=cloze_model,
-                fields=[card["text"], ""],
-            ))
+            deck.add_note(
+                genanki.Note(
+                    model=cloze_model,
+                    fields=[card["text"], ""],
+                )
+            )
 
     with tempfile.NamedTemporaryFile(suffix=".apkg", delete=False) as f:
         tmp_path = f.name
@@ -112,6 +120,7 @@ def create_anki_deck(cards: list[dict], deck_name: str = "PDF Anki Cards") -> by
 # ---------------------------------------------------------------------------
 # Helpers
 # ---------------------------------------------------------------------------
+
 
 def _to_html(text: str) -> str:
     """Convert plain-text newlines to HTML line breaks."""

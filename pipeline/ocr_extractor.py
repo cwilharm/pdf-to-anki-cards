@@ -3,6 +3,7 @@
 Uses PyMuPDF for rendering (no poppler/system dep) and EasyOCR for
 recognition (no Tesseract/system dep).  Both are pure-Python wheels.
 """
+
 import io
 import re
 from pathlib import Path
@@ -75,6 +76,7 @@ def ocr_pages(pdf_path: str, page_numbers: list[int], dpi: int = 300) -> list[di
 # Image pre-processing
 # ---------------------------------------------------------------------------
 
+
 def _preprocess(image: Image.Image) -> Image.Image:
     """
     Enhance image quality before OCR.
@@ -89,6 +91,7 @@ def _preprocess(image: Image.Image) -> Image.Image:
 # ---------------------------------------------------------------------------
 # Text assembly — handles multi-column layouts
 # ---------------------------------------------------------------------------
+
 
 def _assemble_text(detections: list) -> str:
     """
@@ -141,6 +144,7 @@ def _assemble_text(detections: list) -> str:
 # ---------------------------------------------------------------------------
 # Text cleaning (mirrors _clean_text in extractor.py)
 # ---------------------------------------------------------------------------
+
 
 def _clean_ocr_text(text: str) -> str:
     text = text.replace("\r\n", "\n").replace("\r", "\n")
