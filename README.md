@@ -4,6 +4,8 @@ Convert any PDF into exam-ready Anki flashcards using OpenAI. Upload a document,
 
 Supports both digital PDFs (with an embedded text layer) and scanned documents (image-only pages are processed via OCR automatically).
 
+![Image of the Streamlit Interface](screenshots/screenshot.png)
+
 
 ## Features
 

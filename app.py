@@ -16,7 +16,7 @@ from pipeline.generator import generate_cards_for_chunk
 from pipeline.quality import filter_and_deduplicate
 from pipeline.exporter import create_anki_deck
 
-load_dotenv()
+load_dotenv(Path(__file__).parent / ".env")
 
 # ---------------------------------------------------------------------------
 # Constants
