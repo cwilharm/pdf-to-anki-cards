@@ -4,7 +4,6 @@ Convert any PDF into exam-ready Anki flashcards using OpenAI. Upload a document,
 
 Supports both digital PDFs (with an embedded text layer) and scanned documents (image-only pages are processed via OCR automatically).
 
----
 
 ## Features
 
@@ -17,14 +16,13 @@ Supports both digital PDFs (with an embedded text layer) and scanned documents (
 - **Quality filter** — short or near-duplicate cards are removed before export
 - **Cost-efficient** — uses gpt-4o-mini; approximately $0.06 per 100 pages
 
----
 
 ## Requirements
 
 - Python 3.11 or later
-- An OpenAI API key
+- An OpenAI API account & key
 
----
+
 
 ## Installation
 
@@ -36,7 +34,7 @@ pip install -r requirements.txt
 
 No system packages or external binaries are required. All dependencies are pure Python wheels.
 
----
+
 
 ## Configuration
 
@@ -48,7 +46,6 @@ OPENAI_API_KEY=sk-...
 
 Alternatively, paste your key directly in the sidebar when the app is running. It is used only for the current session and never stored.
 
----
 
 ## Usage
 
@@ -61,7 +58,6 @@ streamlit run app.py
 3. Click "Generate My Cards"
 4. Download the `.apkg` file and import it into Anki via **File > Import**
 
----
 
 ## How It Works
 
@@ -94,7 +90,6 @@ PDF
               so re-importing the same deck does not create duplicates.
 ```
 
----
 
 ## Project Structure
 
@@ -113,7 +108,6 @@ PDF-To-Anki/
 └── .gitignore
 ```
 
----
 
 ## Notes on OCR
 
@@ -123,7 +117,7 @@ The OCR pipeline renders pages at 300 DPI and applies contrast enhancement and e
 
 EasyOCR's Latin-script model covers English, German, French, Spanish, Italian, Portuguese, Dutch, Polish, Czech, Swedish, and other languages that share the same character set.
 
----
+
 
 ## Cost Estimate
 
@@ -135,7 +129,6 @@ EasyOCR's Latin-script model covers English, German, French, Spanish, Italian, P
 
 Scanned PDFs incur no additional API cost; OCR runs locally.
 
----
 
 ## License
 
