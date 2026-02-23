@@ -208,14 +208,16 @@ with st.sidebar:
 # ---------------------------------------------------------------------------
 # Main area
 # ---------------------------------------------------------------------------
-st.title("📚 PDF → Anki Cards")
+st.title("PDF → Anki Cards")
 st.markdown(
     "Transform any PDF into exam-ready Anki flashcards — "
-    "powered by AI, built for serious learners. **Let's go!** 🚀"
+    "powered by OpenAI Gpt-4o-mini. **Let's go!** 🚀"
 )
 
 uploaded_file = st.file_uploader(
-    "Drop your PDF here and let's get started!", type=["pdf"], label_visibility="collapsed"
+    "Drop your PDF here and let's get started!",
+    type=["pdf"],
+    label_visibility="collapsed",
 )
 
 if uploaded_file:
@@ -236,7 +238,7 @@ if uploaded_file:
             help=(
                 "**Basic**: classic question & answer cards.\n"
                 "**Cloze**: fill-in-the-blank — key term is hidden.\n"
-                "**Both**: AI picks the best type per concept automatically."
+                "**Both**: We let the AI pick the best card type."
             ),
         )
         card_type_map = {
@@ -262,7 +264,7 @@ if uploaded_file:
             )
             answer_format = "bullets" if ans_label == "Bullet points" else "sentences"
 
-    start = st.button("⚡ Generate My Cards — Let's Go!", type="primary", use_container_width=True)
+    start = st.button("⚡ Generate My Cards!", type="primary", use_container_width=True)
 
     if start:
         if not api_key:
@@ -295,7 +297,9 @@ if uploaded_file:
                 st.stop()
 
             progress_bar.progress(0.12)
-            st.success(f"✅ {len(pages)} pages loaded — nice, this is going to be good!")
+            st.success(
+                f"✅ {len(pages)} pages loaded — nice, this is going to be good!"
+            )
 
             # ── Step 2: Chunk ────────────────────────────────────────────
             progress_bar.progress(0.14)
@@ -326,17 +330,24 @@ if uploaded_file:
                 progress_bar.progress(0.16 + (i / total_chunks) * 0.64)
                 status_box.markdown(
                     _mk_status(
-                        3, "AI is crafting your cards ✨",
+                        3,
+                        "AI is crafting your cards ✨",
                         f"Chunk {i + 1}/{total_chunks} &nbsp;({page_label})"
-                        + (f"&nbsp;·&nbsp; {len(all_cards)} cards so far" if all_cards else ""),
-                        _fmt_time(elapsed), eta_str,
+                        + (
+                            f"&nbsp;·&nbsp; {len(all_cards)} cards so far"
+                            if all_cards
+                            else ""
+                        ),
+                        _fmt_time(elapsed),
+                        eta_str,
                     ),
                     unsafe_allow_html=True,
                 )
 
                 # ── API call ──────────────────────────────────────────────
                 cards = generate_cards_for_chunk(
-                    chunk, client,
+                    chunk,
+                    client,
                     language_name=language_name,
                     model=model,
                     card_type=card_type,
@@ -349,16 +360,19 @@ if uploaded_file:
                 remaining = total_chunks - (i + 1)
                 eta_str = (
                     _fmt_time(remaining / max((i + 1) / elapsed, 0.001))
-                    if remaining > 0 else ""
+                    if remaining > 0
+                    else ""
                 )
 
                 progress_bar.progress(0.16 + ((i + 1) / total_chunks) * 0.64)
                 status_box.markdown(
                     _mk_status(
-                        3, "AI is crafting your cards ✨",
+                        3,
+                        "AI is crafting your cards ✨",
                         f"Chunk {i + 1}/{total_chunks} &nbsp;({page_label})"
                         f"&nbsp;·&nbsp; {len(all_cards)} cards collected",
-                        _fmt_time(elapsed), eta_str,
+                        _fmt_time(elapsed),
+                        eta_str,
                     ),
                     unsafe_allow_html=True,
                 )
@@ -379,14 +393,18 @@ if uploaded_file:
             # ── Step 4: Quality control ──────────────────────────────────
             progress_bar.progress(0.86)
             status_box.markdown(
-                _mk_status(4, "Quality check & dedup — keeping only the best", "", "", ""),
+                _mk_status(
+                    4, "Quality check & dedup — keeping only the best", "", "", ""
+                ),
                 unsafe_allow_html=True,
             )
             filtered = filter_and_deduplicate(all_cards)
             removed = len(all_cards) - len(filtered)
 
             if removed:
-                st.info(f"ℹ️ {removed} duplicate / low-quality cards removed — quality over quantity!")
+                st.info(
+                    f"ℹ️ {removed} duplicate / low-quality cards removed — quality over quantity!"
+                )
 
             # ── Step 5: Export ───────────────────────────────────────────
             progress_bar.progress(0.94)
@@ -398,7 +416,7 @@ if uploaded_file:
 
             progress_bar.progress(1.0)
             status_box.markdown(
-                _mk_status(4, "Done — your cards are ready! 🎯", "", "", ""),
+                _mk_status(4, "Done — your cards are ready!", "", "", ""),
                 unsafe_allow_html=True,
             )
 
@@ -417,7 +435,7 @@ if uploaded_file:
             )
 
             st.download_button(
-                label="⬇️ Download Your Deck & Crush That Exam! 💪",
+                label="⬇️ Download Your Deck & Crush That Exam!",
                 data=deck_bytes,
                 file_name=f"{deck_name or 'anki_deck'}.apkg",
                 mime="application/octet-stream",
