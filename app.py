@@ -5,6 +5,10 @@ import re
 import time
 import tempfile
 from pathlib import Path
+import certifi
+
+os.environ.setdefault("SSL_CERT_FILE", certifi.where())
+os.environ.setdefault("REQUESTS_CA_BUNDLE", certifi.where())
 
 import streamlit as st
 from dotenv import load_dotenv
@@ -283,8 +287,15 @@ if uploaded_file:
 
             # ── Step 1: Extract ──────────────────────────────────────────
             progress_bar.progress(0.04)
+            from pipeline.ocr_extractor import models_cached
+            ocr_note = (
+                "Scanned document detected — downloading OCR models (~200 MB). "
+                "This only happens once and may take a few minutes."
+                if not models_cached()
+                else ""
+            )
             status_box.markdown(
-                _mk_status(1, "Reading your PDF...", "", "", ""),
+                _mk_status(1, "Reading your PDF...", ocr_note, "", ""),
                 unsafe_allow_html=True,
             )
 

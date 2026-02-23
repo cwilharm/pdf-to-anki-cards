@@ -21,7 +21,18 @@ _QUALITY = """\
   by someone who has never seen the source document. Name the subject explicitly —
   never use vague references like "the process", "the institution", "the method above".
   BAD:  "What is the main role of the institution?"
-  GOOD: "What is the main role of the European Central Bank (ECB)?"\
+  GOOD: "What is the main role of the European Central Bank (ECB)?"
+• DOCUMENT-SPECIFIC questions only: every question must use the exact concepts, terms,
+  models, and names from the source material — never generic placeholders. Specificity
+  comes from the concrete subject matter itself, never from phrases like "in this text",
+  "according to the author", or "as described above". Those phrases are strictly forbidden
+  in card questions and answers.
+  Ask yourself: "Could this question appear in any introductory textbook on this subject?"
+  If yes, sharpen it using the specific terminology, conditions, or mechanisms from the text.
+  BAD:  "What are the advantages of regularisation?" (generic, appears in every ML textbook)
+  BAD:  "According to this text, when does method X outperform method Y?" (forbidden reference)
+  GOOD: "Why does L2 regularisation reduce model variance without producing sparse weights,
+         while L1 regularisation does?"\
 """
 
 _FORBIDDEN = """\

@@ -5,6 +5,7 @@ recognition (no Tesseract/system dep).  Both are pure-Python wheels.
 """
 import io
 import re
+from pathlib import Path
 
 import fitz  # PyMuPDF
 import numpy as np
@@ -13,6 +14,11 @@ from PIL import Image, ImageEnhance, ImageFilter
 
 # Lazy-initialised reader — models (~200 MB) download once on first use.
 _reader: easyocr.Reader | None = None
+
+
+def models_cached() -> bool:
+    """Return True if the EasyOCR detection model is already on disk."""
+    return (Path.home() / ".EasyOCR" / "model" / "craft_mlt_25k.pth").exists()
 
 
 def _get_reader() -> easyocr.Reader:
