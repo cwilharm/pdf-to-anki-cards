@@ -29,7 +29,7 @@ Supports both digital PDFs (with an embedded text layer) and scanned documents (
 ## Installation
 
 ```bash
-git clone https://github.com/your-username/PDF-To-Anki.git
+git clone https://github.com/cwilharm/PDF-To-Anki.git
 cd PDF-To-Anki
 pip install -r requirements.txt
 ```
