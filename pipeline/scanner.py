@@ -1,4 +1,4 @@
-"""Scan PDF chunks to discover the main topics covered in the material."""
+"""Scan PDF chunks to discover the MAIN topics covered in the material."""
 
 import json
 import re
@@ -9,27 +9,40 @@ import openai
 # ---------------------------------------------------------------------------
 
 _SCAN_SYSTEM = """\
-You are analyzing a document to identify its main topics, chapters, or subject areas.
-Extract all distinct conceptual topics covered in the text.
+You are analyzing a document to identify its main subject areas and chapter-level themes.
+Your task: extract the 4–8 BROAD, HIGH-LEVEL main topics of the ENTIRE document.
 
 Rules:
-• List 3–15 meaningful, distinct topics
-• Use the exact terminology from the document — not generic labels like "Introduction"
-• Each description: 1 concise sentence explaining what aspect is covered
+• Think at chapter level — broad subject areas, not granular sub-topics
+• Each topic should cover a significant portion of the material
+• Use the exact field/subject terminology from the document
+• Do NOT list more than 8 topics — merge related sub-topics into one broader topic
 • Do NOT invent topics that are not present in the text
+• Avoid: "Introduction", "Conclusion", "Overview", "Summary" — these are not topics
 
-OUTPUT: {"topics": [{"name": "Topic Name", "description": "One-sentence description"}]}\
+GOOD examples of topic granularity:
+  "Monetary Policy"         (not "The ECB's 2023 Interest Rate Decision")
+  "Machine Learning"        (not "Adam Optimizer Hyperparameters")
+  "EU Institutional Design" (not "The role of the European Parliament in the legislative process")
+
+OUTPUT: {"topics": [{"name": "Topic Name", "description": "One-sentence description of what this topic covers"}]}\
 """
 
 _SCAN_USER = """\
-Identify the main topics covered in the following text (pages {pages}).
+Identify the 4–8 main topics of the following document excerpts.
+These excerpts are representative samples from across the entire document.
 
-<text>
+<document_excerpts>
 {text}
-</text>
+</document_excerpts>
 
 Reply ONLY with the JSON object.\
 """
+
+# Max words to send in a single scan call (well within gpt-4o-mini context)
+_MAX_WORDS_PER_BATCH = 10_000
+# Words to sample from each chunk for the overview
+_WORDS_PER_CHUNK_SAMPLE = 350
 
 # ---------------------------------------------------------------------------
 # Public API
@@ -43,7 +56,7 @@ def scan_topics_from_chunks(
     language_name: str = "English",
 ) -> list[dict]:
     """
-    Scan every chunk to discover the topics covered in the material.
+    Scan all chunks holistically to discover the document's main topics.
 
     Returns a deduplicated list of dicts:
         [{"name": str, "description": str}, ...]
@@ -53,24 +66,39 @@ def scan_topics_from_chunks(
         + f"\n\nRespond in {language_name}. All topic names and descriptions must be in {language_name}."
     )
 
-    all_topics: list[dict] = []
-
+    # Build representative samples from every chunk
+    samples: list[str] = []
     for chunk in chunks:
         p = chunk["pages"]
-        pages_str = f"{p[0]}–{p[-1]}" if len(p) > 1 else str(p[0])
-
-        # Use a representative sample (first ~700 words) to keep scanning cheap
+        label = f"pp.{p[0]}–{p[-1]}" if len(p) > 1 else f"p.{p[0]}"
         words = chunk["text"].split()
-        sample = " ".join(words[:700])
+        sample = " ".join(words[:_WORDS_PER_CHUNK_SAMPLE])
+        samples.append(f"[{label}]\n{sample}")
 
-        user_msg = _SCAN_USER.format(pages=pages_str, text=sample)
+    # Split samples into batches that fit in one API call
+    batches: list[list[str]] = []
+    current_batch: list[str] = []
+    current_words = 0
+    for s in samples:
+        wc = len(s.split())
+        if current_words + wc > _MAX_WORDS_PER_BATCH and current_batch:
+            batches.append(current_batch)
+            current_batch = []
+            current_words = 0
+        current_batch.append(s)
+        current_words += wc
+    if current_batch:
+        batches.append(current_batch)
 
+    all_topics: list[dict] = []
+    for batch in batches:
+        combined = "\n\n---\n\n".join(batch)
         try:
             response = client.chat.completions.create(
                 model=model,
                 messages=[
                     {"role": "system", "content": system},
-                    {"role": "user", "content": user_msg},
+                    {"role": "user", "content": _SCAN_USER.format(text=combined)},
                 ],
                 temperature=0.1,
                 response_format={"type": "json_object"},
@@ -80,7 +108,7 @@ def scan_topics_from_chunks(
             topics = _parse_topics(raw)
             all_topics.extend(topics)
         except Exception as e:
-            print(f"[scanner] Error scanning pages {pages_str}: {e}")
+            print(f"[scanner] Error scanning batch: {e}")
 
     return _deduplicate_topics(all_topics)
 
@@ -128,17 +156,14 @@ def _validate_topics(topics: list) -> list[dict]:
             t.get("name", t.get("topic", t.get("titel", t.get("thema", ""))))
         ).strip()
         desc = str(
-            t.get(
-                "description",
-                t.get("beschreibung", t.get("summary", t.get("beschreibung", ""))),
-            )
+            t.get("description", t.get("beschreibung", t.get("summary", "")))
         ).strip()
         if name and len(name) > 2:
             valid.append({"name": name, "description": desc})
     return valid
 
 
-def _deduplicate_topics(topics: list[dict], threshold: float = 0.55) -> list[dict]:
+def _deduplicate_topics(topics: list[dict], threshold: float = 0.45) -> list[dict]:
     """Remove near-duplicate topics by Jaccard similarity on lowercased names."""
     seen: list[str] = []
     unique: list[dict] = []

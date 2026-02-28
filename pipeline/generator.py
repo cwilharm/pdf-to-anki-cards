@@ -17,23 +17,33 @@ _QUALITY = """\
 • Questions: specific and action-oriented (Why? How exactly? What is the difference between X and Y?)
 • Prefer conceptual understanding over pure fact recall
 • For formulas/algorithms: state the meaning of variables and the use case
-• For comparisons: name ONE concrete difference per card, not all differences at once
-• SELF-CONTAINED questions: every question must include enough context to be answerable
-  by someone who has never seen the source document. Name the subject explicitly —
-  never use vague references like "the process", "the institution", "the method above".
-  BAD:  "What is the main role of the institution?"
-  GOOD: "What is the main role of the European Central Bank (ECB)?"
-• DOCUMENT-SPECIFIC questions only: every question must use the exact concepts, terms,
-  models, and names from the source material — never generic placeholders. Specificity
-  comes from the concrete subject matter itself, never from phrases like "in this text",
-  "according to the author", or "as described above". Those phrases are strictly forbidden
-  in card questions and answers.
-  Ask yourself: "Could this question appear in any introductory textbook on this subject?"
-  If yes, sharpen it using the specific terminology, conditions, or mechanisms from the text.
-  BAD:  "What are the advantages of regularisation?" (generic, appears in every ML textbook)
-  BAD:  "According to this text, when does method X outperform method Y?" (forbidden reference)
-  GOOD: "Why does L2 regularisation reduce model variance without producing sparse weights,
-         while L1 regularisation does?"\
+• For comparisons: name ONE concrete difference per card, not all differences at once\
+"""
+
+_SELF_CONTAINED = """\
+━━━ SELF-CONTAINED CARDS (HARD RULE — applies to EVERY card) ━━━
+Every question must be 100% understandable WITHOUT reading the source document.
+A student who has NEVER seen this PDF must be able to fully understand and answer the question.
+ALL necessary context must be inside the question itself — never assume the reader has any background.
+
+STRICTLY FORBIDDEN in questions AND answers:
+✗ "the method", "the algorithm", "the institution", "the model", "the formula" — always name it explicitly
+✗ "in this text", "according to the author", "as described above", "in the document"
+✗ "this approach", "the process", "the concept" without stating what it is
+✗ Any unnamed pronoun or reference that requires reading the source to decode
+
+REQUIRED: Every concept, person, institution, algorithm, formula, and mechanism must be NAMED.
+
+Self-check before writing each question: "Could someone answer this without the PDF?"
+  NO  → Add the missing name/context to the question itself, then ask again
+  YES → Proceed
+
+BAD:  "What is the advantage of the method over the baseline?"
+GOOD: "What is the key advantage of Transformer self-attention over LSTM recurrent connections for long sequences?"
+BAD:  "What are the conditions for the theorem to hold?"
+GOOD: "What are the two conditions required for the Central Limit Theorem (CLT) to apply?"
+BAD:  "How does the institution regulate the market?"
+GOOD: "How does the European Central Bank (ECB) regulate the money supply through open market operations?"\
 """
 
 _FORBIDDEN = """\
@@ -80,11 +90,36 @@ _ANS_SENTENCES = (
     "Answers: 1–2 concise sentences maximum — straight to the point, no filler text. "
     "If an answer needs more than 2 sentences, split it into multiple cards."
 )
-_ANS_BULLETS = (
-    "Answers: 2–3 tight bullet points max, each starting with '• '.\n"
-    "If you need more than 3 bullets, the question is too broad — split into multiple cards.\n"
-    "Example: '• Core mechanism\\n• Key consequence\\n• Exception if critical'"
-)
+
+_ANS_BULLETS = """\
+━━━ ANSWER FORMAT: BULLET POINTS — MANDATORY, NO EXCEPTIONS ━━━
+EVERY answer field MUST consist exclusively of bullet points starting with "• ".
+Prose sentences in the answer are strictly forbidden — even for a single fact.
+
+Rules:
+• 1–3 bullets per card — if you need more than 3, the question is too broad → split it
+• Each bullet: one tight fact, mechanism, or term — no filler words
+• Even a one-fact answer must be a single bullet: "• [the fact]"
+
+CORRECT:
+  Q: "Who elects the members of the European Parliament?"
+  A: "• Directly by EU citizens in each member state."
+  Q: "What does the softmax function output?"
+  A: "• A probability distribution over all output classes that sums to 1."
+
+WRONG (forbidden prose):
+  A: "The European Parliament is elected directly by EU citizens."
+  A: "Softmax converts raw logits into a normalized probability distribution."\
+"""
+
+_EXHAUSTIVE = """\
+━━━ CARD VOLUME: BE EXHAUSTIVE ━━━
+Your goal is MAXIMUM COVERAGE — extract as many high-quality cards as possible from the text.
+Systematically work through every paragraph and cover every concept, definition, mechanism,
+formula, comparison, cause/effect relationship, condition, exception, and exam-relevant fact.
+Do NOT skip a concept because it seems minor — if it appears in the text, it deserves a card.
+A thorough pass over 4–5 pages should produce at least 15–25 cards.\
+"""
 
 # ---------------------------------------------------------------------------
 # Card-format instructions
@@ -137,8 +172,9 @@ OUTPUT: {"cards": [{"type": "basic", "front": "…", "back": "…"}, {"type": "c
 
 _USER_TMPL = """\
 Create Anki flashcards from the following text (pages {pages}).
-Extract all important concepts, definitions, relationships, and exam-relevant \
-content — omit nothing important, skip the trivial.
+Be EXHAUSTIVE — go through every paragraph and extract every concept, definition, \
+mechanism, formula, comparison, cause/effect, condition, and exam-relevant fact. \
+Omit nothing important, skip only the truly trivial.
 
 <text>
 {text}
@@ -149,10 +185,12 @@ Reply ONLY with the JSON object.\
 
 _USER_TMPL_TOPICS = """\
 Create Anki flashcards from the following text (pages {pages}).
-Generate cards ONLY for content that belongs to one of these topics:
+Be EXHAUSTIVE — extract every concept, definition, mechanism, formula, comparison, \
+cause/effect, condition, and exam-relevant fact that belongs to one of these topics:
 {topics_list}
 
-Additional rules:
+Rules:
+• Work through every paragraph — maximum coverage is required.
 • Assign EXACTLY one topic from the list above to each card — add a "topic" field with the verbatim topic name.
 • Only create a card if the content is genuinely about one of the listed topics.
 • If the text contains no content about any of these topics, return {{"cards": []}}.
@@ -184,20 +222,22 @@ def _build_system_prompt(card_type: str, answer_format: str, language_name: str)
     if card_type == "basic":
         fmt = _FMT_BASIC
         ans = _ANS_BULLETS if answer_format == "bullets" else _ANS_SENTENCES
-        parts = [_ROLE, _QUALITY, _FORBIDDEN, _ATOMICITY, fmt, ans]
+        parts = [_ROLE, _SELF_CONTAINED, _QUALITY, _FORBIDDEN, _ATOMICITY, _EXHAUSTIVE, fmt, ans]
 
     elif card_type == "cloze":
         # Cloze cards are inherently atomic (one blank = one fact)
-        parts = [_ROLE, _QUALITY, _FORBIDDEN, _FMT_CLOZE]
+        parts = [_ROLE, _SELF_CONTAINED, _QUALITY, _FORBIDDEN, _EXHAUSTIVE, _FMT_CLOZE]
 
     else:  # both
         fmt = _FMT_BOTH
         ans = _ANS_BULLETS if answer_format == "bullets" else _ANS_SENTENCES
         parts = [
             _ROLE,
+            _SELF_CONTAINED,
             _QUALITY,
             _FORBIDDEN,
             _ATOMICITY,
+            _EXHAUSTIVE,
             fmt,
             f"For Basic cards: {ans}",
         ]
@@ -252,7 +292,7 @@ def generate_cards_for_chunk_with_topics(
             ],
             temperature=0.25,
             response_format={"type": "json_object"},
-            max_tokens=2048,
+            max_tokens=4096,
         )
         raw = response.choices[0].message.content.strip()
         return _parse_cards(raw, topic_aware=True)
@@ -290,7 +330,7 @@ def generate_cards_for_chunk(
             ],
             temperature=0.25,
             response_format={"type": "json_object"},
-            max_tokens=2048,
+            max_tokens=4096,
         )
         raw = response.choices[0].message.content.strip()
         return _parse_cards(raw)
