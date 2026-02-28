@@ -132,13 +132,35 @@ OUTPUT: {"cards": [{"type": "basic", "front": "…", "back": "…"}, {"type": "c
 """
 
 # ---------------------------------------------------------------------------
-# User message template
+# User message templates
 # ---------------------------------------------------------------------------
 
 _USER_TMPL = """\
 Create Anki flashcards from the following text (pages {pages}).
 Extract all important concepts, definitions, relationships, and exam-relevant \
 content — omit nothing important, skip the trivial.
+
+<text>
+{text}
+</text>
+
+Reply ONLY with the JSON object.\
+"""
+
+_USER_TMPL_TOPICS = """\
+Create Anki flashcards from the following text (pages {pages}).
+Generate cards ONLY for content that belongs to one of these topics:
+{topics_list}
+
+Additional rules:
+• Assign EXACTLY one topic from the list above to each card — add a "topic" field with the verbatim topic name.
+• Only create a card if the content is genuinely about one of the listed topics.
+• If the text contains no content about any of these topics, return {{"cards": []}}.
+• Do NOT fabricate or invent information not present in the text.
+
+Expected output keys per card:
+  Basic:  "front", "back", "topic"
+  Cloze:  "text", "topic"
 
 <text>
 {text}
@@ -194,6 +216,51 @@ def _build_system_prompt(card_type: str, answer_format: str, language_name: str)
 # ---------------------------------------------------------------------------
 
 
+def generate_cards_for_chunk_with_topics(
+    chunk: dict,
+    topics: list[str],
+    client: openai.OpenAI,
+    language_name: str = "Deutsch",
+    model: str = "gpt-4o-mini",
+    card_type: str = "basic",
+    answer_format: str = "sentences",
+) -> list[dict]:
+    """
+    Like generate_cards_for_chunk but restricts output to the given topics and
+    adds a "topic" field to every returned card.
+
+    Returns [] when the chunk contains no content for any of the listed topics.
+    """
+    system = _build_system_prompt(card_type, answer_format, language_name)
+
+    p = chunk["pages"]
+    pages_str = f"{p[0]}–{p[-1]}" if len(p) > 1 else str(p[0])
+
+    topics_list = "\n".join(f"  • {t}" for t in topics)
+    user_msg = _USER_TMPL_TOPICS.format(
+        pages=pages_str,
+        topics_list=topics_list,
+        text=chunk["text"],
+    )
+
+    try:
+        response = client.chat.completions.create(
+            model=model,
+            messages=[
+                {"role": "system", "content": system},
+                {"role": "user", "content": user_msg},
+            ],
+            temperature=0.25,
+            response_format={"type": "json_object"},
+            max_tokens=2048,
+        )
+        raw = response.choices[0].message.content.strip()
+        return _parse_cards(raw, topic_aware=True)
+    except Exception as e:
+        print(f"[generator] Error on chunk (pages {pages_str}) with topics: {e}")
+        return []
+
+
 def generate_cards_for_chunk(
     chunk: dict,
     client: openai.OpenAI,
@@ -237,7 +304,7 @@ def generate_cards_for_chunk(
 # ---------------------------------------------------------------------------
 
 
-def _parse_cards(raw: str) -> list[dict]:
+def _parse_cards(raw: str, topic_aware: bool = False) -> list[dict]:
     raw = re.sub(r"```(?:json)?\s*", "", raw).strip().rstrip("```").strip()
 
     try:
@@ -255,34 +322,41 @@ def _parse_cards(raw: str) -> list[dict]:
     if isinstance(data, dict):
         for key in ("cards", "flashcards", "karten", "anki_cards", "data", "items"):
             if key in data and isinstance(data[key], list):
-                return _validate(data[key])
+                return _validate(data[key], topic_aware=topic_aware)
         for v in data.values():
             if isinstance(v, list):
-                return _validate(v)
+                return _validate(v, topic_aware=topic_aware)
         return []
 
     if isinstance(data, list):
-        return _validate(data)
+        return _validate(data, topic_aware=topic_aware)
 
     return []
 
 
-def _validate(cards: list) -> list[dict]:
+def _validate(cards: list, topic_aware: bool = False) -> list[dict]:
     valid = []
     for card in cards:
         if not isinstance(card, dict):
             continue
         explicit_type = card.get("type", "")
+        topic = str(card.get("topic", "")).strip() if topic_aware else None
 
         if explicit_type == "cloze" or ("text" in card and "front" not in card):
             text = str(card.get("text", "")).strip()
             if text and "{{c" in text:
-                valid.append({"text": text})
+                entry: dict = {"text": text}
+                if topic_aware and topic:
+                    entry["topic"] = topic
+                valid.append(entry)
 
         elif "front" in card and "back" in card:
             front = str(card["front"]).strip()
             back = str(card["back"]).strip()
             if front and back:
-                valid.append({"front": front, "back": back})
+                entry = {"front": front, "back": back}
+                if topic_aware and topic:
+                    entry["topic"] = topic
+                valid.append(entry)
 
     return valid

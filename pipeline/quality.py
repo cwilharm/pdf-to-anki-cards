@@ -30,7 +30,10 @@ def _dedup_basic(cards: list[dict], threshold: float) -> list[dict]:
         front = card.get("front", "").strip()
         back = card.get("back", "").strip()
         if len(front) >= 12 and len(back) >= 10:
-            valid.append({"front": front, "back": back})
+            entry: dict = {"front": front, "back": back}
+            if "topic" in card:
+                entry["topic"] = card["topic"]
+            valid.append(entry)
 
     seen: list[str] = []
     unique: list[dict] = []
@@ -55,7 +58,10 @@ def _dedup_cloze(cards: list[dict], threshold: float) -> list[dict]:
         text = card.get("text", "").strip()
         if not text or not _CLOZE_RE.search(text) or len(text) < 20:
             continue
-        valid.append({"text": text})
+        entry: dict = {"text": text}
+        if "topic" in card:
+            entry["topic"] = card["topic"]
+        valid.append(entry)
 
     seen: list[str] = []
     unique: list[dict] = []

@@ -117,6 +117,86 @@ def create_anki_deck(cards: list[dict], deck_name: str = "PDF Anki Cards") -> by
         os.unlink(tmp_path)
 
 
+def create_multi_deck_package(
+    topic_decks: list[dict],
+    base_name: str = "PDF Anki",
+) -> bytes:
+    """
+    Build a single .apkg containing one sub-deck per topic.
+
+    topic_decks: [{"topic": str, "cards": list[dict]}, ...]
+      Each card is either {"front", "back"} or {"text"} (optionally with "topic").
+
+    Sub-decks are named  base_name::topic  (Anki hierarchy notation).
+    Returns raw .apkg bytes.
+    """
+    all_decks: list[genanki.Deck] = []
+
+    for entry in topic_decks:
+        topic = entry["topic"]
+        cards = entry["cards"]
+        if not cards:
+            continue
+
+        deck_full_name = f"{base_name}::{topic}"
+        deck_id = _stable_id(deck_full_name + "__deck__")
+        deck = genanki.Deck(deck_id, deck_full_name)
+
+        basic_cards = [c for c in cards if "front" in c]
+        cloze_cards = [c for c in cards if "text" in c]
+
+        if basic_cards:
+            basic_model = genanki.Model(
+                _stable_id(deck_full_name + "__basic__"),
+                "PDF Anki Basic",
+                fields=[{"name": "Front"}, {"name": "Back"}],
+                templates=[{"name": "Card", "qfmt": _QFMT, "afmt": _AFMT}],
+                css=_CSS,
+            )
+            for card in basic_cards:
+                deck.add_note(
+                    genanki.Note(
+                        model=basic_model,
+                        fields=[_to_html(card["front"]), _to_html(card["back"])],
+                    )
+                )
+
+        if cloze_cards:
+            cloze_model = genanki.Model(
+                _stable_id(deck_full_name + "__cloze__"),
+                "PDF Anki Cloze",
+                model_type=genanki.Model.CLOZE,
+                fields=[{"name": "Text"}, {"name": "Extra"}],
+                templates=[
+                    {
+                        "name": "Cloze",
+                        "qfmt": "{{cloze:Text}}",
+                        "afmt": "{{cloze:Text}}",
+                    }
+                ],
+                css=_CSS,
+            )
+            for card in cloze_cards:
+                deck.add_note(
+                    genanki.Note(
+                        model=cloze_model,
+                        fields=[card["text"], ""],
+                    )
+                )
+
+        all_decks.append(deck)
+
+    with tempfile.NamedTemporaryFile(suffix=".apkg", delete=False) as f:
+        tmp_path = f.name
+
+    try:
+        genanki.Package(all_decks).write_to_file(tmp_path)
+        with open(tmp_path, "rb") as f:
+            return f.read()
+    finally:
+        os.unlink(tmp_path)
+
+
 # ---------------------------------------------------------------------------
 # Helpers
 # ---------------------------------------------------------------------------
